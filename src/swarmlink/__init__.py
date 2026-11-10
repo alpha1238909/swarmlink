@@ -12,7 +12,7 @@ from .core import (
     predict_collisions,
     leader_follower_commands,
 )
-from .protocol import decode_packet, encode_packet
+from .protocol import COMPACT_PROTOCOL_VERSION, PROTOCOL_VERSION, decode_packet, encode_compact_packet, encode_packet
 from .sim import FaultInjectingMesh, FaultProfile, SimulatedMesh
 from .coordination import (
     CoordinationInstruction,
@@ -31,6 +31,7 @@ from .geodesy import GeoPoint, LocalFrame
 from .resilience import Heartbeat, HeartbeatMonitor
 from .security import PacketAuthenticationError, PacketAuthenticator, ReplayDetectedError
 from .audit import AuditEvent, CoordinationAuditLog
+from .bridge import JSONLinesTelemetryDecoder, SerialBridgeError, stream_serial_telemetry
 
 __all__ = [
     "CollisionAlert",
@@ -66,10 +67,16 @@ __all__ = [
     "ReplayDetectedError",
     "AuditEvent",
     "CoordinationAuditLog",
+    "JSONLinesTelemetryDecoder",
+    "SerialBridgeError",
     "decode_packet",
+    "encode_compact_packet",
     "encode_packet",
     "leader_follower_commands",
     "predict_collisions",
+    "stream_serial_telemetry",
+    "COMPACT_PROTOCOL_VERSION",
+    "PROTOCOL_VERSION",
 ]
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"

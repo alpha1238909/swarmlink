@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "swarmlink"
-version = "0.3.0"
-description = "Offline multi-robot telemetry, tracking, collision prediction, and simulation core."
+version = "0.4.0"
+description = "Local-first multi-robot telemetry, tracking, coordination, and simulation core."
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
@@ -21,6 +21,9 @@ classifiers = [
 
 [project.scripts]
 swarmlink = "swarmlink.cli:main"
+
+[project.optional-dependencies]
+serial = ["pyserial>=3.5"]
 
 [project.urls]
 Homepage = "https://github.com/alpha1238909/swarmlink"

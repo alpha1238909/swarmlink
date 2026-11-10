@@ -207,6 +207,21 @@ def on_lora_bytes(packet: bytes) -> None:
 
 The equivalent outgoing message is `encode_packet(telemetry)`. This lets a project choose ESP-NOW for nearby ESP32 robots, LoRa for long-range field nodes, MQTT for a local lab, or ROS 2/MAVLink at the integration layer, without embedding credentials or an irreversible transport decision in the package.
 
+## ESP32 and USB serial bridge
+
+Version 0.4 includes a ready-to-flash [ESP-NOW reference adapter](adapters/esp32_espnow/). ESP32 boards broadcast a compact, versioned packet designed for ESP-NOW's 250-byte frame limit; SwarmLink expands it into the same `NodeTelemetry` object used everywhere else. One USB-connected receiver forwards received frames as JSON Lines to a laptop or Raspberry Pi.
+
+```bash
+# From a source checkout. pyserial is the only optional dependency.
+python -m pip install '.[serial]'
+swarmlink bridge-serial --port COM4 --baudrate 115200 --out field-test.jsonl
+
+# Stop with Ctrl+C, then inspect the portable log.
+swarmlink inspect field-test.jsonl
+```
+
+The adapter's default `readYourSensors()` is a stationary bench-test sample. Replace it with GPS, UWB, IMU, or wheel-odometry code once the radio path works. It transmits **telemetry only**—never direct motor or flight-control commands. Read the adapter [bring-up and packet-size notes](adapters/esp32_espnow/README.md) before connecting physical vehicles.
+
 ## Safety and scope
 
 - Collision output is a planning and alerting aid, **not** an aviation separation, autonomy, or motor-control system.
@@ -216,7 +231,7 @@ The equivalent outgoing message is `encode_packet(telemetry)`. This lets a proje
 
 ## Roadmap
 
-1. ESP-NOW, serial, and MQTT reference adapters
+1. MQTT reference adapter
 2. UWB-anchor utilities and pose-quality estimates
 3. MAVLink and ROS 2 bridges
 4. Pluggable path planners that independently validate high-level intents

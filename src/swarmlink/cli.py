@@ -6,7 +6,8 @@ import argparse
 import json
 from pathlib import Path
 
-from .core import MissionLog, NodeTelemetry, Position, VehicleKind, Velocity
+from .bridge import SerialBridgeError, stream_serial_telemetry
+from .core import MissionLog, NodeRegistry, NodeTelemetry, Position, VehicleKind, Velocity
 from .sim import SimulatedMesh
 
 
@@ -56,6 +57,29 @@ def inspect(args: argparse.Namespace) -> int:
     return 0
 
 
+def bridge_serial(args: argparse.Namespace) -> int:
+    """Record packets arriving from an ESP32 USB serial bridge."""
+    registry, log = NodeRegistry(), MissionLog()
+    try:
+        for telemetry in stream_serial_telemetry(args.port, baudrate=args.baudrate):
+            if registry.ingest(telemetry):
+                log.append(telemetry)
+                if not args.quiet:
+                    print(json.dumps({"node_id": telemetry.node_id, "timestamp_s": telemetry.timestamp_s, "records": len(log.records)}))
+            if args.max_records is not None and len(log.records) >= args.max_records:
+                break
+    except KeyboardInterrupt:
+        pass
+    except SerialBridgeError as error:
+        print(f"swarmlink: {error}")
+        return 2
+    finally:
+        if log.records:
+            output = log.write_jsonl(args.out)
+            print(json.dumps({"records": len(log.records), "nodes": [item.node_id for item in registry.snapshot()], "mission_log": str(output)}, indent=2))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="swarmlink", description="Multi-robot telemetry and simulation core")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -70,6 +94,13 @@ def build_parser() -> argparse.ArgumentParser:
     inspector = commands.add_parser("inspect", help="summarise a SwarmLink JSON Lines mission log")
     inspector.add_argument("path", type=Path)
     inspector.set_defaults(handler=inspect)
+    serial_bridge = commands.add_parser("bridge-serial", help="record newline-delimited telemetry from an ESP32 USB serial bridge")
+    serial_bridge.add_argument("--port", required=True, help="serial device, such as COM4 or /dev/ttyUSB0")
+    serial_bridge.add_argument("--baudrate", type=int, default=115_200)
+    serial_bridge.add_argument("--out", type=Path, default=Path("swarmlink-serial-mission.jsonl"))
+    serial_bridge.add_argument("--max-records", type=int, help="stop cleanly after this many accepted records")
+    serial_bridge.add_argument("--quiet", action="store_true", help="do not print each accepted telemetry packet")
+    serial_bridge.set_defaults(handler=bridge_serial)
     return parser
 
 
@@ -78,6 +109,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.command == "simulate" and (args.nodes < 2 or args.duration <= 0 or args.step_s <= 0):
         parser.error("simulate requires at least 2 nodes plus positive duration and --step-s")
+    if args.command == "bridge-serial" and args.max_records is not None and args.max_records <= 0:
+        parser.error("bridge-serial --max-records must be positive")
     return args.handler(args)
 
 
